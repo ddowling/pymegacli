@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# Dump out information on the physical disks
+
+import argparse
+import os
+import sys
+
+import pymegacli
+from tabulate import tabulate
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--megacli-path',
+        default='/opt/MegaRAID/MegaCli/MegaCli64',
+        help='Path to MegaCli or MegaCli64 (default %(default)s)'
+    )
+    args = parser.parse_args()
+
+    if os.geteuid() != 0:
+        parser.error('Must run as root!')
+
+    connection = pymegacli.MegaCLIBase(args.megacli_path)
+
+    controllers = list(connection.controllers)
+    if not controllers:
+        messages[OK].append('No MegaRAID controllers found on this host')
+        sys.exit(1)
+
+    for controller in controllers:
+        if True:
+            print("Physical Disks")
+            header = ['Enclosure', 'Slot', 'Size', 'Inquiry', 'Link Speed']
+            data = []
+            for disk in controller.PDs:
+                size = disk.get('Raw Size').split('[')[0]
+                inquiry = ' '.join(disk.get('Inquiry Data').split())
+                data.append([disk.enclosure_id,
+                             disk.slot_number,
+                             size,
+                             inquiry,
+                             disk.get('Link Speed')
+                             ])
+
+            print(tabulate(data, headers=header, tablefmt='psql'))
+
+        if True:
+            print("Logical Disks")
+            header = ['Name', 'RAID', 'Disks', 'Size', 'State']
+            data = []
+            for ld in controller.LDs:
+                raid = ld.get('RAID Level').split()[0]
+                size = "%.3f TB" % (int(ld.get('Size'))/1.e12)
+                slots = controller.getSlotsForLogicalDrive(ld.name)
+                data.append([ld.name,
+                            raid,
+                            ', '.join(slots),
+                            size,
+                            ld.get('State')
+                            ])
+
+            print(tabulate(data, headers=header, tablefmt='psql'))
+
+
+if __name__ == '__main__':
+    sys.exit(main())

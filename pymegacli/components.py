@@ -32,7 +32,7 @@ class MegaCLIBase(object):
             shell=False,
             stdout=subprocess.PIPE
         )
-        for line in p.communicate()[0].split('\n'):
+        for line in p.communicate()[0].decode('ascii').split('\n'):
             emd = exit_re.match(line)
             if emd:
                 # exit code is usually meaningless
@@ -42,7 +42,7 @@ class MegaCLIBase(object):
                 yield line
 
     def extract_by_regex(self, regex, lines, one_only=False):
-        if isinstance(regex, basestring):
+        if isinstance(regex, str):
             regex = re.compile(regex)
         result = []
         for line in lines:
@@ -180,6 +180,7 @@ class Disk(Component):
 
 class LogicalDevice(Component):
     PARSER = BlockParser(rules=[
+        ignore_rule(colon_field('Adapter 0 -- Virtual Drive Information')),
         once_per_block(colon_field('Virtual Drive', lambda s: int(s.split(' ')[0]))),
         rule(colon_field('Bad Blocks Exist', yesnobool)),
         rule(colon_field('Size', parse_bytes)),
@@ -258,7 +259,8 @@ class MegaCLIController(object):
     def __init__(self, controller_number, parent):
         self.controller_number = controller_number
         self.parent = parent
-
+        self.logical_drive_slots = None
+        
     @property
     def patrol_read_status(self):
         """patrol reads are the background disk re-reads that constantly
@@ -290,3 +292,24 @@ class MegaCLIController(object):
         return BBU.from_output(self.parent.run_command(
             '-AdpBbuCmd -GetBbuStatus', '-a%d' % self.controller_number
         ), self)
+
+    def getSlotsForLogicalDrive(self, logical_name):
+        if not self.logical_drive_slots:
+            self.logical_drive_slots = {}
+            
+            s = self.parent.run_command('-LdPdInfo', '-aAll')
+            name_parser = colon_field('Name')
+            slot_parser = colon_field('Slot Number')
+            found_logical_name = ''
+            for l in s:
+                n = name_parser(l)
+                if n:
+                    found_logical_name = n[1]
+                    self.logical_drive_slots[found_logical_name] = []
+
+                s = slot_parser(l)
+                if s:
+                    self.logical_drive_slots[found_logical_name].append(s[1])
+
+        return self.logical_drive_slots[logical_name]
+                

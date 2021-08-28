@@ -82,16 +82,16 @@ def main():
                         messages[WARNING].append('%s is in learn cycle' % bbu.identifier)
 
     if messages[CRITICAL]:
-        print 'CRITICAL: %s' % '; '.join(messages[CRITICAL])
+        print('CRITICAL: %s' % '; '.join(messages[CRITICAL]))
         return CRITICAL
     elif messages[WARNING]:
-        print 'WARNING: %s' % '; '.join(messages[WARNING])
+        print('WARNING: %s' % '; '.join(messages[WARNING]))
         return WARNING
     elif messages[UNKNOWN]:
-        print 'UNKNOWN: %s' % '; '.join(messages[UNKNOWN])
+        print('UNKNOWN: %s' % '; '.join(messages[UNKNOWN]))
         return UNKNOWN
     else:
-        print 'OK: %s' % '; '.join(messages[OK])
+        print('OK: %s' % '; '.join(messages[OK]))
         return OK
 
 
